@@ -1,10 +1,10 @@
 # ML_project
  Machine Learning Project :
- - Faces detection in real time
- - Faces recognition in real time
- - Emotion detection in real time
+ - Faces detection in real time ( Haar Cascade Algorithm )
+ - Faces recognition in real time ( K-nearest Neighbors )
+ - Emotion detection in real time ( Facial Expresion Recognition a CNN model )
+ - Age detection ( Keras )
  - Gender detection
- - Age detection
  - Race detection
  - etc...
 
