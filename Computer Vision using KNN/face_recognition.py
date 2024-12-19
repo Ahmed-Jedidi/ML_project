@@ -2,6 +2,11 @@ import cv2
 import numpy as np
 import pickle
 from sklearn.neighbors import KNeighborsClassifier
+import os
+from fer import FER
+
+# Path to save model
+model_path = 'data/knn_model.pkl'
 
 # Load the data X_train
 with open('data/faces.pkl', 'rb') as w:
@@ -13,11 +18,26 @@ with open('data/names.pkl', 'rb') as f:
 
 facec = cv2.CascadeClassifier('data/haarcascade_frontalface_default.xml')
 
-# shape of faces data/matrix
-print('Shape of Faces matrix --> ', faces.shape)
+# Jedidi Initialize emotion detector from FER
+emotion_detector = FER()
 
-knn = KNeighborsClassifier(n_neighbors=5)
-knn.fit(faces,labels)
+# Vérifiez si le modèle KNN existe déjà
+if os.path.exists(model_path):
+    print("Chargement du modèle KNN existant...")
+    with open(model_path, 'rb') as f:
+        knn = pickle.load(f)
+else:
+    # shape of faces data/matrix
+    print('Shape of Faces matrix --> ', faces.shape)
+    print("Entraînement d'un nouveau modèle KNN...")
+
+    knn = KNeighborsClassifier(n_neighbors=5)
+    knn.fit(faces,labels)
+    
+    # Sauvegarder le modèle pour une utilisation future
+    with open(model_path, 'wb') as f:
+        pickle.dump(knn, f)
+    print("Modèle KNN sauvegardé.")
 
 # Define KNN functions
 
@@ -75,28 +95,42 @@ while True:
             fc = frame[y:y + h, x:x + w, :]
             r = cv2.resize(fc, (50, 50)).flatten().reshape(1,-1)
             text = knn.predict(r)
-            cv2.putText(frame, text[0], (x, y-15), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
 
-            #drawing a rectangle around the face for showing
-            # represents the top left corner of rectangle
-            start_point = (x, y)
+            # Jedidi Detect emotions in the current frame
+            emotions = emotion_detector.detect_emotions(frame)
 
-            # represents the bottom right corner of rectangle
-            end_point = (x + w, y + h)
+            if emotions:
+                # Jedidi Get the first detected face's emotions
+                emotion_data = emotions[0]['emotions']
+                max_emotion = max(emotion_data, key=emotion_data.get)
+                (ex, ey, ew, eh) = emotions[0]["box"]
 
-            # Red color in BGR
-            color = (0, 0, 255)
 
-            # Line thickness of 2 px
-            thickness = 2
-            cv2.rectangle(frame, start_point, end_point, (0, 0, 255), thickness)
+                #cv2.putText(frame, text[0], (x, y-15), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+
+                # Jedidi Display emotion and name on the frame
+                cv2.putText(frame, f"{text[0]} - {max_emotion}", (x, y - 15), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+
+                #drawing a rectangle around the face for showing
+                # represents the top left corner of rectangle
+                start_point = (x, y)
+
+                # represents the bottom right corner of rectangle
+                end_point = (x + w, y + h)
+
+                # Red color in BGR
+                color = (0, 0, 255)
+
+                # Line thickness of 2 px
+                thickness = 2
+                cv2.rectangle(frame, start_point, end_point, (0, 0, 255), thickness)
 
         cv2.imshow('Projet face recogonition Ahmed Jedidi 2eme Ingenieurie', frame)
         #ESC key to stop
         if cv2.waitKey(1) == 27:
             break
     else:
-        print("error")
+        print("error de lecture de la caméra.")
         break
 
 cv2.destroyAllWindows()
